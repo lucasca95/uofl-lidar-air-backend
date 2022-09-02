@@ -1,9 +1,7 @@
 -- DROP DATABASE db_lidar_air;
 -- CREATE DATABASE db_lidar_air;
 
-DROP TABLE IF EXISTS DATALIDAR;
 DROP TABLE IF EXISTS LIDAR;
-DROP TABLE IF EXISTS DATAAIR;
 DROP TABLE IF EXISTS AIR;
 DROP TABLE IF EXISTS DEVICE;
 DROP TABLE IF EXISTS DEVICETYPE;
@@ -23,8 +21,8 @@ CREATE TABLE DEVICE(
 
 CREATE TABLE LIDAR(
     id INT PRIMARY KEY AUTO_INCREMENT,
-    people INT NOT NULL DEFAULT 0,
-    vehicles INT NOT NULL DEFAULT 0,
+    people INT NOT NULL DEFAULT -1,
+    vehicles INT NOT NULL DEFAULT -1,
     device_id INT NOT NULL,
     timedate DATETIME NOT NULL DEFAULT NOW(),
     FOREIGN KEY (device_id) REFERENCES DEVICE(id)
@@ -32,11 +30,23 @@ CREATE TABLE LIDAR(
 
 CREATE TABLE AIR(
     id INT PRIMARY KEY AUTO_INCREMENT,
-    attr1 INT NOT NULL DEFAULT 0,
-    attr2 INT NOT NULL DEFAULT 0,
+    aqi INT NOT NULL,
+    so2 INT NOT NULL,
+    no2 INT NOT NULL,
+    o3 INT NOT NULL,
+    pm1p0 INT NOT NULL,
+    pm2p5 INT NOT NULL,
+    pm10 INT NOT NULL,
+    co INT NOT NULL,
+    temp INT NOT NULL,
+    pres INT NOT NULL,
+    relhum INT NOT NULL,
+    noise INT NOT NULL,
     device_id INT NOT NULL,
+    timedate DATETIME NOT NULL DEFAULT NOW(),
     FOREIGN KEY (device_id) REFERENCES DEVICE(id)
 );
+
 
 INSERT INTO DEVICETYPE(
 	name
@@ -87,4 +97,58 @@ BEGIN
 END//
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS GenerateAirData;
+DELIMITER //
+CREATE PROCEDURE GenerateAirData(IN device_name VARCHAR(30), IN count INT)
+BEGIN
+    SET @ii = 1;
+    SET @difference = CEIL(RAND()*59);
+    SET @starting_date = (SELECT (DATE_SUB(NOW(), INTERVAL 10 DAY)));
+    repetition: LOOP
+        IF @ii > count THEN
+            LEAVE repetition;
+        END IF;
+
+        INSERT INTO AIR(
+            aqi,
+            so2,
+            no2,
+            o3,
+            pm1p0,
+            pm2p5,
+            pm10,
+            co,
+            temp,
+            pres,
+            relhum,
+            noise,
+            timedate,
+            device_id
+        )VALUES(
+            FLOOR(RAND()*30),
+            FLOOR(RAND()*2),
+            FLOOR(RAND()*2),
+            FLOOR(RAND()*11),
+            FLOOR(RAND()*11),
+            FLOOR(RAND()*11),
+            FLOOR(RAND()*11),
+            FLOOR(RAND()*2),
+            FLOOR(RAND()*90),
+            FLOOR(RAND()*1500),
+            FLOOR(RAND()*100),
+            FLOOR(RAND()*100),
+            @starting_date,
+            (SELECT d.id
+            FROM DEVICE as d
+            WHERE d.name = device_name)
+        );
+        SET @difference = CEIL(RAND()*59);
+        SET @starting_date = (SELECT(DATE_ADD(@starting_date, INTERVAL @difference MINUTE)));
+        SET @ii = @ii + 1;
+        ITERATE repetition;
+    END LOOP;
+END//
+DELIMITER ;
+
 CALL GenerateLidarData('Raspberry 1', 100);
+CALL GenerateAirData('Raspberry 1', 100);
