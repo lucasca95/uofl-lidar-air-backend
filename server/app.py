@@ -166,7 +166,56 @@ class ProcessNewData(Resource):
             'status': 200,
             'message': message
         }
-            
+       
+class GetLidarData(Resource):
+    def get(self):
+        return {
+            'status': 200,
+            'message': 'Not valid method for this endpoint'
+        }
+
+    def post(self):
+        device_id = request.json.get("id")
+        # pdb.set_trace(); print("")
+        if not device_id:
+            return {
+                'status': 200,
+                'message': "Expected id not found"
+            }
+        
+        data = []
+
+        try:
+            with connection.cursor() as cursor:
+                sql = """
+                    SELECT ll.people, ll.vehicles, ll.timedate FROM `LIDAR` as ll
+                    WHERE ll.device_id = %s
+                    ORDER BY ll.timedate DESC
+                    LIMIT 10
+                """
+                cursor.execute(sql, [device_id]
+                )
+                for elem in cursor:
+                    data.append({
+                        'people': elem['people'],
+                        'vehicles': elem['vehicles'],
+                        'datetime': str(elem['timedate'])
+                    })
+
+            connection.commit()
+
+        except Exception as ee:
+            print(f"DB error: {ee}")
+            return {
+                'status': 201,
+                'message': 'Internal error'
+            }
+
+        return {
+            'status': 200,
+            'device_id': device_id,
+            'data': data
+        }
 
 
 class Home(Resource):
@@ -182,6 +231,7 @@ class Home(Resource):
 #region   Routes declaration
 # =============================================================================
 api.add_resource(ProcessNewData, '/newdata/')
+api.add_resource(GetLidarData, '/get/lidar/')
 api.add_resource(Home, '/')
 #endregion
 
