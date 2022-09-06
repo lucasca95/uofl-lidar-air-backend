@@ -217,6 +217,78 @@ class GetLidarData(Resource):
             'data': data
         }
 
+class GetAirData(Resource):
+    def get(self):
+        return {
+            'status': 200,
+            'message': 'Not valid method for this endpoint'
+        }
+
+    def post(self):
+        device_id = request.json.get("id")
+        # pdb.set_trace(); print("")
+        if not device_id:
+            return {
+                'status': 200,
+                'message': "Expected id not found"
+            }
+        
+        data = []
+
+        try:
+            with connection.cursor() as cursor:
+                sql = """
+                    SELECT 
+                        aa.aqi,
+                        aa.so2,
+                        aa.no2,
+                        aa.o3,
+                        aa.pm1p0,
+                        aa.pm2p5,
+                        aa.pm10,
+                        aa.co,
+                        aa.temp,
+                        aa.pres,
+                        aa.relhum,
+                        aa.noise
+                    FROM AIR as aa
+                    WHERE aa.device_id = %s
+                    ORDER BY timedate DESC
+                    LIMIT 1;
+                """
+                cursor.execute(sql, [device_id]
+                )
+                for elem in cursor:
+                    data.append({
+                        'aqi': elem['aqi'],
+                        'so2': elem['so2'],
+                        'no2': elem['no2'],
+                        'o3': elem['o3'],
+                        'pm1p0': elem['pm1p0'],
+                        'pm2p5': elem['pm2p5'],
+                        'pm10': elem['pm10'],
+                        'co': elem['co'],
+                        'temp': elem['temp'],
+                        'pres': elem['pres'],
+                        'relhum': elem['relhum'],
+                        'noise': elem['noise']
+                    })
+
+            connection.commit()
+
+        except Exception as ee:
+            print(f"DB error: {ee}")
+            return {
+                'status': 201,
+                'message': 'Internal error'
+            }
+
+        return {
+            'status': 200,
+            'device_id': device_id,
+            'data': data
+        }
+
 
 class Home(Resource):
     def get(self):
@@ -232,6 +304,7 @@ class Home(Resource):
 # =============================================================================
 api.add_resource(ProcessNewData, '/newdata/')
 api.add_resource(GetLidarData, '/get/lidar/')
+api.add_resource(GetAirData, '/get/air/')
 api.add_resource(Home, '/')
 #endregion
 
