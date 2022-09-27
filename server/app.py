@@ -1,10 +1,15 @@
+from http import client
 import os
 import pdb
 from time import sleep
+from unicodedata import name
 
 from flask import Flask, request, send_file, jsonify
 from flask_restful import Resource, Api
 from flask_cors import CORS
+
+import json
+import requests as rqs
 
 import pymysql
 
@@ -225,8 +230,9 @@ class GetAirData(Resource):
         }
 
     def post(self):
+        sleep(1.2)
         device_id = request.json.get("id")
-        # pdb.set_trace(); print("")
+        
         if not device_id:
             return {
                 'status': 200,
@@ -273,7 +279,7 @@ class GetAirData(Resource):
                         'relhum': elem['relhum'],
                         'noise': elem['noise']
                     })
-
+            sleep(1)
             connection.commit()
 
         except Exception as ee:
@@ -282,7 +288,7 @@ class GetAirData(Resource):
                 'status': 201,
                 'message': 'Internal error'
             }
-
+        
         return {
             'status': 200,
             'device_id': device_id,
@@ -292,6 +298,7 @@ class GetAirData(Resource):
 
 class Home(Resource):
     def get(self):
+
         return {
             'status': 200,
             'message': 'Server up and running!'
